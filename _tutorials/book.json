@@ -1,0 +1,7 @@
+{
+  "plugins" : [
+    "alerts",
+    "anchors",
+    "mermaid-gb3@git+https://github.com/smola/gitbook-plugin-mermaid-gb3"
+  ]
+}

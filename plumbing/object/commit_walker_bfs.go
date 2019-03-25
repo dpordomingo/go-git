@@ -1,10 +1,7 @@
 package object
 
 import (
-	"io"
-
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
 type bfsCommitIterator struct {
@@ -30,71 +27,13 @@ func NewCommitIterBSF(
 		seen[h] = true
 	}
 
-	return &bfsCommitIterator{
-		seenExternal: seenExternal,
-		seen:         seen,
-		queue:        []*Commit{c},
+	var hasBeenSeen CommitFilter = func(c *Commit) bool {
+		return seenExternal[c.Hash] || seen[c.Hash]
 	}
+
+	var notSeen CommitFilter = func(c *Commit) bool {
+		return !hasBeenSeen(c)
+	}
+
+	return NewFilterCommitIter(c, &notSeen, &hasBeenSeen)
 }
-
-func (w *bfsCommitIterator) appendHash(store storer.EncodedObjectStorer, h plumbing.Hash) error {
-	if w.seen[h] || w.seenExternal[h] {
-		return nil
-	}
-	c, err := GetCommit(store, h)
-	if err != nil {
-		return err
-	}
-	w.queue = append(w.queue, c)
-	return nil
-}
-
-func (w *bfsCommitIterator) Next() (*Commit, error) {
-	var c *Commit
-	for {
-		if len(w.queue) == 0 {
-			return nil, io.EOF
-		}
-		c = w.queue[0]
-		w.queue = w.queue[1:]
-
-		if w.seen[c.Hash] || w.seenExternal[c.Hash] {
-			continue
-		}
-
-		w.seen[c.Hash] = true
-
-		for _, h := range c.ParentHashes {
-			err := w.appendHash(c.s, h)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		return c, nil
-	}
-}
-
-func (w *bfsCommitIterator) ForEach(cb func(*Commit) error) error {
-	for {
-		c, err := w.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-
-		err = cb(c)
-		if err == storer.ErrStop {
-			break
-		}
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (w *bfsCommitIterator) Close() {}

@@ -30,6 +30,7 @@ var args = map[string][]string{
 	"pull":        {createRepositoryWithRemote(tempFolder(), defaultURL)},
 	"ls":          {cloneRepository(defaultURL, tempFolder()), "HEAD", "vendor"},
 	"merge_base":  {cloneRepository(defaultURL, tempFolder()), "--is-ancestor", "HEAD~3", "HEAD^"},
+	"log_local":   {cloneRepository(defaultURL, tempFolder())},
 }
 
 var ignored = map[string]bool{}

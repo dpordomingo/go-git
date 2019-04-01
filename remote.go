@@ -763,22 +763,17 @@ func checkFastForwardUpdate(s storer.EncodedObjectStorer, remoteRefs storer.Refe
 }
 
 func isFastForward(s storer.EncodedObjectStorer, old, new plumbing.Hash) (bool, error) {
-	c, err := object.GetCommit(s, new)
+	newCommit, err := object.GetCommit(s, new)
 	if err != nil {
 		return false, err
 	}
 
-	found := false
-	iter := object.NewCommitPreorderIter(c, nil, nil)
-	err = iter.ForEach(func(c *object.Commit) error {
-		if c.Hash != old {
-			return nil
-		}
+	oldCommit, err := object.GetCommit(s, old)
+	if err != nil {
+		return false, err
+	}
 
-		found = true
-		return storer.ErrStop
-	})
-	return found, err
+	return IsAncestor(oldCommit, newCommit)
 }
 
 func (r *Remote) newUploadPackRequest(o *FetchOptions,

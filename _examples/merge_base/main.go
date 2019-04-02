@@ -4,20 +4,14 @@ import (
 	"os"
 
 	"gopkg.in/src-d/go-git.v4"
+	utils "gopkg.in/src-d/go-git.v4/_examples"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 
-type exitCode int
+const exitCodeNotFound utils.ExitCode = 1
 
 const (
-	exitCodeSuccess exitCode = iota
-	exitCodeNotFound
-	exitCodeWrongSyntax
-	exitCodeCouldNotOpenRepository
-	exitCodeCouldNotParseRevision
-	exitCodeUnexpected
-
 	cmdDesc = "Returns the merge-base between two commits:"
 
 	helpShortMsg = `
@@ -43,15 +37,15 @@ options:
 // Command that mimics `git merge-base --independent <commitRev>...`
 func main() {
 	if len(os.Args) == 1 {
-		helpAndExit("Returns the merge-base between two commits:", helpShortMsg, exitCodeSuccess)
+		utils.HelpAndExit(cmdDesc, helpShortMsg)
 	}
 
 	if os.Args[1] == "--help" || os.Args[1] == "-h" {
-		helpAndExit("Returns the merge-base between two commits:", helpLongMsg, exitCodeSuccess)
+		utils.HelpAndExit(cmdDesc, helpLongMsg)
 	}
 
 	if len(os.Args) < 4 {
-		helpAndExit("Wrong syntax", helpShortMsg, exitCodeWrongSyntax)
+		utils.WrongSyntaxAndExit(helpShortMsg)
 	}
 
 	path := os.Args[1]
@@ -68,24 +62,24 @@ func main() {
 		modeAncestor = true
 		commitRevs = os.Args[3:]
 		if len(commitRevs) != 2 {
-			helpAndExit("Wrong syntax", helpShortMsg, exitCodeWrongSyntax)
+			utils.WrongSyntaxAndExit(helpShortMsg)
 		}
 	default:
 		commitRevs = os.Args[2:]
 		if len(commitRevs) != 2 {
-			helpAndExit("Wrong syntax", helpShortMsg, exitCodeWrongSyntax)
+			utils.WrongSyntaxAndExit(helpShortMsg)
 		}
 	}
 
 	// Open a git repository from current directory
 	repo, err := git.PlainOpen(path)
-	checkIfError(err, exitCodeCouldNotOpenRepository, "not in a git repository")
+	utils.ExitIfError(err, utils.ExitCodeCouldNotOpenRepository)
 
 	// Get the hashes of the passed revisions
 	var hashes []*plumbing.Hash
 	for _, rev := range commitRevs {
 		hash, err := repo.ResolveRevision(plumbing.Revision(rev))
-		checkIfError(err, exitCodeCouldNotParseRevision, "could not parse revision '%s'", rev)
+		utils.ExitIfError(err, utils.ExitCodeCouldNotParseRevision, rev)
 		hashes = append(hashes, hash)
 	}
 
@@ -93,32 +87,32 @@ func main() {
 	var commits []*object.Commit
 	for _, hash := range hashes {
 		commit, err := repo.CommitObject(*hash)
-		checkIfError(err, exitCodeUnexpected, "could not find commit '%s'", hash.String())
+		utils.ExitIfError(err, utils.ExitCodeWrongCommitHash, hash.String())
 		commits = append(commits, commit)
 	}
 
 	if modeAncestor {
-		isAncestor, err := commits[0].IsAncestor(commits[1])
-		checkIfError(err, exitCodeUnexpected, "could not traverse the repository history")
+		isAncestor, err := commits[0].IsAncestor(, commits[1])
+		utils.ExitIfError(err, utils.ExitCodeCouldNotTraverseHistory)
 
 		if !isAncestor {
 			os.Exit(int(exitCodeNotFound))
 		}
 
-		os.Exit(int(exitCodeSuccess))
+		os.Exit(int(utils.ExitCodeSuccess))
 	}
 
 	if modeIndependent {
 		res, err = object.Independents(commits)
-		checkIfError(err, exitCodeUnexpected, "could not traverse the repository history")
+		utils.ExitIfError(err, utils.ExitCodeCouldNotTraverseHistory)
 	} else {
-		res, err = commits[0].MergeBase(commits[1])
-		checkIfError(err, exitCodeUnexpected, "could not traverse the repository history")
+		res, err = commits[0].MergeBase(commits[0], commits[1])
+		utils.ExitIfError(err, utils.ExitCodeCouldNotTraverseHistory)
 
 		if len(res) == 0 {
 			os.Exit(int(exitCodeNotFound))
 		}
 	}
 
-	printCommits(res)
+	utils.PrintCommits(res...)
 }

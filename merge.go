@@ -21,8 +21,8 @@ const (
 var (
 	// ErrSameCommit returned when passed commits are the same
 	ErrSameCommit = errors.New("passed commits are the same")
-	// ErrAlreadyUpToDate returned when the second is behind first
-	ErrAlreadyUpToDate = errors.New("second is behind first")
+	// ErrAlreadyUpToDate returned when the target is behind base
+	ErrAlreadyUpToDate = errors.New("target is behind base")
 	// ErrHasConflicts returned when conflicts found
 	ErrHasConflicts = errors.New("conflicts found")
 	// ErrNoCommonHistory returned when no shared history
@@ -34,8 +34,6 @@ var (
 
 	// ExitCodeUnexpected returned when commit merge is required
 	ErrNotImplementedNoFF = errors.New("no fast-forward merge is not implemented")
-	// ErrNotImplementedNoCommit returned when no-commit is required
-	ErrNotImplementedNoCommit = errors.New("no commit merge is not implemented")
 	// ErrNotImplementedUnrelated returned
 	ErrNotImplementedUnrelated = errors.New("unrelated merge is not implemented")
 	// ErrNotImplementedMessage returned
@@ -46,20 +44,17 @@ var (
 type MergeOptions struct {
 	NoFF           bool   // NoFF when set to true, Merge will always create a merge commit
 	FFOnly         bool   // FFOnly causes the Merge fail if it is not a fast forward
-	NoCommit       bool   // NoCommit leaves the changes in the worktree without commit them
 	AllowUnrelated bool   // AllowUnrelated performs the merge even with unrelated histories
 	Message        string // Message text to be used for the message
 }
 
-// Merge merges the second commit over the first one, and moves `HEAD` to the merge.
-// If `NoCommit` option was passed, the changes required for the merge will be
-// left in the worktree, and the merge commit won't be created.
+// Merge merges the target commit over the base one, and moves `HEAD` to the merge.
 // It returns the merge commit, and an error if the HEAD was not moved or
 // when the merge operation could not be done.
 func Merge(
 	repo *Repository,
-	first *object.Commit,
-	second *object.Commit,
+	base *object.Commit,
+	target *object.Commit,
 	options *MergeOptions,
 ) (*object.Commit, error) {
 	if options == nil {
@@ -80,35 +75,35 @@ func Merge(
 		return nil, ErrWorktreeNotClean
 	}
 
-	if first.Hash == second.Hash {
+	if base.Hash == target.Hash {
 		return nil, ErrSameCommit
 	}
 
-	ancestors, err := MergeBase(first, second)
+	ancestors, err := MergeBase(base, target)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(ancestors) == 0 {
 		if options.AllowUnrelated {
-			return merge(first, second, nil, options.NoCommit, options.Message)
+			return merge(base, target, nil, options.Message)
 		}
 
 		return nil, ErrNoCommonHistory
 	}
 
 	for _, ancestor := range ancestors {
-		if ancestor.Hash == first.Hash {
+		if ancestor.Hash == base.Hash {
 			if options.NoFF {
 				// TODO(dpordomingo): there is a special case;
 				// if asked with `--no-ff` it should be created an empty merge-commit.
 				return nil, ErrNotImplementedNoFF
 			}
 
-			return second, nil
+			return target, nil
 		}
 
-		if ancestor.Hash == second.Hash {
+		if ancestor.Hash == target.Hash {
 			return nil, ErrAlreadyUpToDate
 		}
 	}
@@ -119,14 +114,10 @@ func Merge(
 		return nil, ErrNonFastForwardUpdate
 	}
 
-	return merge(first, second, mergeBase, options.NoCommit, options.Message)
+	return merge(base, target, mergeBase, options.Message)
 }
 
-func merge(
-	first, second, mergeBase *object.Commit,
-	noCommit bool,
-	msg string,
-) (*object.Commit, error) {
+func merge(base, target, mergeBase *object.Commit, msg string) (*object.Commit, error) {
 
 	if mergeBase == nil {
 		// TODO(dpordomingo): handle --no-commit flag
@@ -134,7 +125,7 @@ func merge(
 	}
 
 	var trees []*object.Tree
-	for _, commit := range []*object.Commit{first, second} {
+	for _, commit := range []*object.Commit{base, target} {
 		tree, err := commit.Tree()
 		if err != nil {
 			return nil, err
@@ -148,11 +139,6 @@ func merge(
 		return nil, err
 	}
 	fmt.Println(changes)
-
-	if noCommit {
-		// TODO(dpordomingo): handle --no-commit flag
-		return nil, ErrNotImplementedNoCommit
-	}
 
 	if msg != "" {
 		// TODO(dpordomingo): handle -m option

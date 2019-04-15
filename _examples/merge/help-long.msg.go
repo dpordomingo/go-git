@@ -5,17 +5,17 @@ NAME:
    %_COMMAND_NAME_% - Join two commits
 
 SYNOPSIS:
-  usage: %_COMMAND_NAME_% <path> <baseCommitRev> <commitRev> [-m <msg>] [--ff-only]
+  usage: %_COMMAND_NAME_% <path> <baseCommitRev> <targetCommitRev> [-m <msg>] [--ff-only]
                            [--no-ff] [--no-commit] [--allow-unrelated-histories]
      or: %_COMMAND_NAME_% --help
 
  params:
-    <path>           Path to the git repository
-    <baseCommitRev>  Git revision of the commit that will be the base of the merge
-    <commitRev>      Git revision of the commit that will be merged over the base
+    <path>             Path to the git repository
+    <baseCommitRev>    Git revision of the commit that will be the base of the merge
+    <targetCommitRev>  Git revision of the commit that will be merged over the base
 
 DESCRIPTION:
-    %_COMMAND_NAME_% Incorporates changes from the passed <commitRev> over <baseCommitRev> and moves the HEAD of the repo to the merge commit.
+    %_COMMAND_NAME_% Incorporates changes from the passed <targetCommitRev> over <baseCommitRev> and moves the HEAD of the repo to the merge commit.
 
 OPTIONS:
     If no options passed, the merge commit will be avoided if it could be considered as a fast-forward, and if needed, it will be used a default merge commit message.
@@ -32,16 +32,11 @@ OPTIONS:
     [NOT IMPLEMENTED]
     Create a merge commit even when the merge resolves as a fast-forward.
 
---no-commit
-    [NOT IMPLEMENTED]
-    With --no-commit perform the merge but pretend the merge failed and do not autocommit, to give the user a chance to
-    inspect and further tweak the merge result before committing.
-
 --allow-unrelated-histories
     [NOT IMPLEMENTED]
     By default, git merge command refuses to merge histories that do not share a common ancestor. This option can be
     used to override this safety when merging histories of two projects that started their lives independently.
-    
+
 DISCUSSION:
     Assume the following history exists and the current branch is "master":
 

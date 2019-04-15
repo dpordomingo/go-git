@@ -21,14 +21,14 @@ const (
 	cmdDesc = "Performs the merge between two commits, and moves HEAD into the merge commit:"
 
 	helpShortMsg = `
-  usage: %_COMMAND_NAME_% <path> <baseCommitRev> <commitRev> [-m <msg>] [--ff-only]
-                           [--no-ff] [--no-commit] [--allow-unrelated-histories]
+  usage: %_COMMAND_NAME_% <path> <baseCommitRev> <targetCommitRev> [-m <msg>]
+                            [--ff-only] [--no-ff] [--allow-unrelated-histories]
      or: %_COMMAND_NAME_% --help
 
  params:
-    <path>           Path to the git repository
-    <baseCommitRev>  Git revision of the commit that will be the base of the merge
-    <commitRev>      Git revision of the commit that will be merged over the base
+    <path>             Path to the git repository
+    <baseCommitRev>    Git revision of the commit that will be the base of the merge
+    <targetCommitRev>  Git revision of the commit that will be merged over the base
 
 options:
     (no options)   Performs the regular merge, as fast-forward if possible
@@ -38,7 +38,6 @@ options:
 [NOT IMPLEMENTED]
     -m <msg>       Uses the passed <msg> for the merge commit message
     --no-ff        Create a merge commit even when it could be a fast-forward
-    --no-commit    Performs the merge in the worktree and do not create a commit
     --allow-unrelated-histories
                    Lets the merge to operate with commits not sharing its history
 `
@@ -74,8 +73,6 @@ func main() {
 				mergeOptions.NoFF = true
 			case "--ff-only":
 				mergeOptions.FFOnly = true
-			case "--no-commit":
-				mergeOptions.NoCommit = true
 			case "--allow-unrelated-histories":
 				mergeOptions.AllowUnrelated = true
 			case "-m":
@@ -89,6 +86,10 @@ func main() {
 				utils.WrongSyntaxAndExit(helpShortMsg)
 			}
 		}
+	}
+
+	if mergeOptions.NoFF && mergeOptions.FFOnly {
+		utils.WrongSyntaxAndExit("--no-ff is not compatible with --ff-only")
 	}
 
 	// Open a git repository from current directory
@@ -120,7 +121,6 @@ func main() {
 		fmt.Println("Already up to date.")
 		return
 	case git.ErrNotImplementedUnrelated,
-		git.ErrNotImplementedNoCommit,
 		git.ErrNotImplementedNoFF,
 		git.ErrNotImplementedMessage:
 		utils.ExitIfError(err, exitCodeFeatureNotImplemented, "unimplemented feature")

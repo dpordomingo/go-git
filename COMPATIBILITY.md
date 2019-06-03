@@ -21,7 +21,7 @@ is supported by go-git.
 | **branching and merging** |
 | branch                                | ✔ |
 | checkout                              | ✔ | Basic usages of checkout are supported. |
-| merge                                 | ✖ |
+| merge                                 | ✔ | Only supports merges where the merge can be resolved as a fast-forward. Does not support `--no-commit` nor `--allow-unrelated-histories` flags |
 | mergetool                             | ✖ |
 | stash                                 | ✖ |
 | tag                                   | ✔ |
@@ -86,7 +86,7 @@ is supported by go-git.
 | for-each-ref                          | ✔ |
 | hash-object                           | ✔ |
 | ls-files                              | ✔ |
-| merge-base                            | |
+| merge-base                            | ✔ | Calculates the merge-base only between two commits, and supports `--independent` and `--is-ancestor` modifiers; Does not support `--fork-point` nor `--octopus` modifiers. |
 | read-tree                             | |
 | rev-list                              | ✔ |
 | rev-parse                             | |
